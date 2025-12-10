@@ -1,0 +1,40 @@
+class Paquete {
+  final int? id;
+  final String nombre;
+  final String? descripcion;
+  final double precio;
+  final int duracionMinutos;
+  final bool? estado;
+
+  Paquete({
+    this.id,
+    required this.nombre,
+    this.descripcion,
+    required this.precio,
+    required this.duracionMinutos,
+    this.estado,
+  });
+
+  factory Paquete.fromJson(Map<String, dynamic> json) {
+    return Paquete(
+      id: json['id'] ?? json['ID'],
+      nombre: json['nombre'] ?? json['Nombre'] ?? '',
+      descripcion: json['descripcion'] ?? json['Descripcion'],
+      precio: (json['precio'] ?? json['Precio'] ?? 0).toDouble(),
+      duracionMinutos: json['duracionMinutos'] ?? json['DuracionMinutos'] ?? 0,
+      estado: json['estado'] ?? json['Estado'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'nombre': nombre,
+      'descripcion': descripcion,
+      'precio': precio,
+      'duracionMinutos': duracionMinutos,
+      'estado': estado,
+    };
+  }
+}
+

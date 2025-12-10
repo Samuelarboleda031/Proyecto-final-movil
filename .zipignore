@@ -1,0 +1,52 @@
+# Archivos y carpetas a excluir al comprimir
+
+# Build de Flutter
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+pubspec.lock
+
+# Android
+android/.gradle/
+android/app/build/
+android/build/
+android/.idea/
+android/local.properties
+android/*.iml
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework/
+ios/Flutter/Flutter.podspec
+ios/.flutter-plugins
+ios/.flutter-plugins-dependencies
+
+# Windows
+windows/build/
+
+# Linux
+linux/build/
+
+# macOS
+macos/Flutter/ephemeral/
+
+# Web
+web/build/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Archivos temporales
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+
+# Archivos de usuario específicos
+local.properties
+
