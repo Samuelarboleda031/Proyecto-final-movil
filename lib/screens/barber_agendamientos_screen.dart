@@ -8,6 +8,7 @@ import '../services/agendamiento_service.dart';
 import '../services/auxiliar_service.dart';
 import '../services/auth_service.dart';
 import '../models/app_role.dart';
+import '../utils/estado_cita.dart';
 import '../widgets/session_guard.dart';
 import '../widgets/side_menu.dart';
 import 'barber_agendamiento_form_screen.dart';
@@ -108,24 +109,6 @@ class _BarberAgendamientosScreenState extends State<BarberAgendamientosScreen> {
     }
 
     return filtrados;
-  }
-
-  Color _getEstadoColor(String estado) {
-    switch (estado.toLowerCase()) {
-      case 'pendiente':
-        return Colors.orange;
-      case 'confirmado':
-      case 'confirmada':
-        return Colors.blue;
-      case 'completado':
-      case 'completada':
-        return Colors.green;
-      case 'cancelado':
-      case 'cancelada':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
   }
 
   Future<void> _verDetallesAgendamiento(Agendamiento ag) async {
@@ -329,8 +312,8 @@ class _BarberAgendamientosScreenState extends State<BarberAgendamientosScreen> {
                       vertical: 12,
                     ),
                   ),
-                  items: ['Todos', 'Pendiente', 'Confirmado', 'Confirmada', 'Completado', 'Completada', 'Cancelado', 'Cancelada']
-                      .map((estado) => DropdownMenuItem(
+                  items: EstadoCita.todosConFiltro
+                      .map((estado) => DropdownMenuItem<String>(
                             value: estado,
                             child: Text(estado),
                           ))
@@ -398,23 +381,23 @@ class _BarberAgendamientosScreenState extends State<BarberAgendamientosScreen> {
                                         ),
                                       ),
                                     ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
+                                     Container(
+                                       padding: const EdgeInsets.symmetric(
+                                         horizontal: 8,
+                                         vertical: 4,
+                                       ),
+                                       decoration: BoxDecoration(
+                                         color: EstadoCita.getColor(ag.estadoCita).withAlpha(50),
+                                         borderRadius: BorderRadius.circular(12),
+                                         border: Border.all(
+                                           color: EstadoCita.getColor(ag.estadoCita),
+                                         ),
                                       ),
-                                      decoration: BoxDecoration(
-                                        color: _getEstadoColor(ag.estadoCita).withValues(alpha: 0.2),
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(
-                                          color: _getEstadoColor(ag.estadoCita),
-                                        ),
-                                      ),
-                                      child: Text(
-                                        ag.estadoCita,
-                                        style: TextStyle(
-                                          color: _getEstadoColor(ag.estadoCita),
-                                          fontSize: 12,
+                                       child: Text(
+                                         ag.estadoCita,
+                                         style: TextStyle(
+                                           color: EstadoCita.getColor(ag.estadoCita),
+                                           fontSize: 12,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),

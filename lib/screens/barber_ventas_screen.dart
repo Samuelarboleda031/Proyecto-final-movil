@@ -27,6 +27,7 @@ class _BarberVentasScreenState extends State<BarberVentasScreen> {
   final AuthService _authService = AuthService();
 
   List<Venta> _ventas = [];
+  Map<int, String> _nombresClientes = {};
   bool _isLoading = true;
   String _searchQuery = '';
 
@@ -45,6 +46,14 @@ class _BarberVentasScreenState extends State<BarberVentasScreen> {
       final user = _authService.currentUser;
       if (user == null || user.email == null) {
         throw Exception('No se pudo identificar al usuario actual como barbero.');
+      }
+
+      // Cargar clientes para mapear nombres si faltan en la venta
+      try {
+        final clientes = await _auxiliarService.obtenerClientes();
+        _nombresClientes = {for (var c in clientes) c.id!: c.nombreCompleto};
+      } catch (e) {
+        print('Error cargando clientes auxiliares: $e');
       }
 
       final barberos = await _auxiliarService.obtenerBarberos();
@@ -524,13 +533,22 @@ class _BarberVentasScreenState extends State<BarberVentasScreen> {
                                 title: Row(
                                   children: [
                                     Expanded(
-                                      child: Text(
-                                        'Venta #${venta.numero}',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 18,
+                                        child: Builder(
+                                          builder: (context) {
+                                            final nombreCliente = venta.cliente?.nombreCompleto ?? 
+                                                                _nombresClientes[venta.clienteId];
+                                            
+                                            return Text(
+                                              nombreCliente != null 
+                                                  ? 'Venta hecha a $nombreCliente'
+                                                  : 'Venta #${venta.numero}',
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 18,
+                                              ),
+                                            );
+                                          }
                                         ),
-                                      ),
                                     ),
                                     Container(
                                       padding: const EdgeInsets.symmetric(
@@ -559,6 +577,7 @@ class _BarberVentasScreenState extends State<BarberVentasScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     const SizedBox(height: 8),
+                                      const SizedBox(height: 8),
                                     if (venta.cliente != null)
                                       Text(
                                         'Cliente: ${venta.cliente!.nombreCompleto}',

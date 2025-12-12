@@ -10,6 +10,7 @@ import '../models/app_role.dart';
 import '../services/agendamiento_service.dart';
 import '../services/auxiliar_service.dart';
 import '../services/user_context_service.dart';
+import '../utils/estado_cita.dart';
 import '../widgets/session_guard.dart';
 
 class BarberAgendamientoFormScreen extends StatefulWidget {
@@ -177,17 +178,20 @@ class _BarberAgendamientoFormScreenState
         hour: int.parse(finParts[0]),
         minute: int.parse(finParts[1]),
       );
-      _estadoCita = agendamiento.estadoCita;
+      _estadoCita = agendamiento.estadoCita == 'Confirmado' ? 'Confirmada' : agendamiento.estadoCita;
       _monto = agendamiento.monto;
       _observaciones = agendamiento.observaciones;
     });
   }
 
   Future<void> _selectDate() async {
+    final now = DateTime.now();
+    final firstDate = _fechaSeleccionada.isBefore(now) ? _fechaSeleccionada : now;
+
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _fechaSeleccionada,
-      firstDate: DateTime.now(),
+      firstDate: firstDate,
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
     if (picked != null) {
@@ -374,11 +378,12 @@ class _BarberAgendamientoFormScreenState
         const SizedBox(height: 8),
         InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(4),
           child: InputDecorator(
             decoration: const InputDecoration(
               border: OutlineInputBorder(),
               isDense: true,
+              contentPadding: EdgeInsets.symmetric(vertical: 12, horizontal: 12),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -389,8 +394,7 @@ class _BarberAgendamientoFormScreenState
                     style: const TextStyle(fontWeight: FontWeight.w500),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Icon(icon, size: 18),
+                Icon(icon, size: 20),
               ],
             ),
           ),
@@ -584,7 +588,9 @@ class _BarberAgendamientoFormScreenState
                                 ),
                           const SizedBox(height: 16),
 
+                          // Fecha y Hora
                           Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Expanded(
                                 child: _buildPickerField(
@@ -608,6 +614,7 @@ class _BarberAgendamientoFormScreenState
                           const SizedBox(height: 16),
 
                           Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Expanded(
                                 child: _buildPickerField(
@@ -619,18 +626,27 @@ class _BarberAgendamientoFormScreenState
                               ),
                               const SizedBox(width: 16),
                               Expanded(
-                                child: TextFormField(
-                                  readOnly: true,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Monto',
-                                    border: OutlineInputBorder(),
-                                    prefixIcon: Icon(Icons.attach_money),
-                                  ),
-                                  controller: TextEditingController(
-                                    text: _monto != null
-                                        ? '\$${_monto!.toStringAsFixed(2)}'
-                                        : '',
-                                  ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('Monto'),
+                                    const SizedBox(height: 8),
+                                    TextFormField(
+                                      readOnly: true,
+                                      decoration: const InputDecoration(
+                                        border: OutlineInputBorder(),
+                                        isDense: true,
+                                        prefixIcon: Icon(Icons.attach_money, size: 20),
+                                        contentPadding: EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                                      ),
+                                      controller: TextEditingController(
+                                        text: _monto != null
+                                            ? '\$${_monto!.toStringAsFixed(2)}'
+                                            : '',
+                                      ),
+                                      style: const TextStyle(fontWeight: FontWeight.w500),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
@@ -643,13 +659,7 @@ class _BarberAgendamientoFormScreenState
                               labelText: 'Estado de la cita',
                               border: OutlineInputBorder(),
                             ),
-                            items: const [
-                              'Pendiente',
-                              'Confirmada',
-                              'En curso',
-                              'Completada',
-                              'Cancelada',
-                            ].map((estado) {
+                            items: EstadoCita.todos.map((estado) {
                               return DropdownMenuItem(
                                 value: estado,
                                 child: Text(estado),

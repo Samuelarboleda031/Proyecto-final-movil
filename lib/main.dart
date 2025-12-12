@@ -17,6 +17,7 @@ import 'screens/client_profile_screen.dart';
 import 'screens/barber_profile_screen.dart';
 import 'firebase_options.dart';
 import 'services/auth_service.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 void main() async{
   WidgetsFlutterBinding.ensureInitialized();
@@ -139,6 +140,15 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         '/cliente/perfil': (context) => const ClientProfileScreen(),
         '/barbero/perfil': (context) => const BarberProfileScreen(),
       },
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('en', ''), // English, no country code
+        Locale('es', ''), // Spanish, no country code
+      ],
     );
   }
 }

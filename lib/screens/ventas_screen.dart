@@ -25,6 +25,7 @@ class _VentasScreenState extends State<VentasScreen> {
   final VentaService _ventaService = VentaService();
   final AuxiliarService _auxiliarService = AuxiliarService();
   List<Venta> _ventas = [];
+  Map<int, String> _nombresClientes = {};
   bool _isLoading = true;
   String _searchQuery = '';
 
@@ -41,6 +42,15 @@ class _VentasScreenState extends State<VentasScreen> {
 
     try {
       final ventas = await _ventaService.obtenerVentas();
+      
+      // Cargar clientes para mapear nombres si faltan en la venta
+      try {
+        final clientes = await _auxiliarService.obtenerClientes();
+        _nombresClientes = {for (var c in clientes) c.id!: c.nombreCompleto};
+      } catch (e) {
+        print('Error cargando clientes auxiliares: $e');
+      }
+
       setState(() {
         _ventas = ventas;
         _isLoading = false;
@@ -436,12 +446,21 @@ class _VentasScreenState extends State<VentasScreen> {
                                   title: Row(
                                     children: [
                                       Expanded(
-                                        child: Text(
-                                          'Venta #${venta.numero}',
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 18,
-                                          ),
+                                        child: Builder(
+                                          builder: (context) {
+                                            final nombreCliente = venta.cliente?.nombreCompleto ?? 
+                                                                _nombresClientes[venta.clienteId];
+                                            
+                                            return Text(
+                                              nombreCliente != null
+                                                  ? 'Venta hecha a $nombreCliente'
+                                                  : 'Venta #${venta.numero}',
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 18,
+                                              ),
+                                            );
+                                          }
                                         ),
                                       ),
                                       Container(
@@ -471,13 +490,6 @@ class _VentasScreenState extends State<VentasScreen> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       const SizedBox(height: 8),
-                                      if (venta.cliente != null)
-                                        Text(
-                                          'Cliente: ${venta.cliente!.nombreCompleto}',
-                                          style: TextStyle(
-                                            color: Colors.grey.shade400,
-                                          ),
-                                        ),
                                       if (venta.barbero != null)
                                         Text(
                                           'Barbero: ${venta.barbero!.nombreCompleto}',

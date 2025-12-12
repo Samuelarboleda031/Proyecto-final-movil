@@ -3,8 +3,12 @@ import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import '../models/agendamiento.dart';
 import '../models/app_role.dart';
+import '../models/barbero.dart'; // Import Barbero model
 import '../services/agendamiento_service.dart';
 import '../services/user_context_service.dart';
+import '../services/auxiliar_service.dart'; // Import AuxiliarService
+import '../utils/estado_cita.dart';
+import '../utils/app_snackbar.dart';
 import '../widgets/session_guard.dart';
 import '../widgets/side_menu.dart';
 import 'client_agendamiento_form_screen.dart';
@@ -19,6 +23,7 @@ class ClientAgendamientosScreen extends StatefulWidget {
 class _ClientAgendamientosScreenState extends State<ClientAgendamientosScreen> {
   final AgendamientoService _agendamientoService = AgendamientoService();
   final UserContextService _userContextService = UserContextService();
+  final AuxiliarService _auxiliarService = AuxiliarService(); // Initialize Service
   List<Agendamiento> _agendamientos = [];
   bool _isLoading = true;
   bool _isDateFormatInitialized = false;
@@ -72,12 +77,7 @@ class _ClientAgendamientosScreenState extends State<ClientAgendamientosScreen> {
         _isLoading = false;
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al cargar tus citas: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        AppToast.showError(context, 'Error al cargar tus citas: $e');
       }
     }
   }
@@ -94,62 +94,90 @@ class _ClientAgendamientosScreenState extends State<ClientAgendamientosScreen> {
     return filtrados;
   }
 
-  Color _getEstadoColor(String estado) {
-    switch (estado.toLowerCase()) {
-      case 'pendiente':
-        return Colors.orange;
-      case 'confirmado':
-        return Colors.blue;
-      case 'completado':
-        return Colors.green;
-      case 'cancelado':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  void _verDetallesAgendamiento(Agendamiento agendamiento) {
+  Future<void> _verDetallesAgendamiento(Agendamiento ag) async {
+    // Show loading dialog
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Detalles de tu Cita'),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildDetailRow('Tipo:', agendamiento.servicio != null ? 'Servicio' : 'Paquete'),
-              _buildDetailRow('Nombre:', agendamiento.servicio?.nombre ?? agendamiento.paquete?.nombre ?? 'N/A'),
-              const Divider(),
-              if (agendamiento.barbero != null)
-                _buildDetailRow('Barbero:', agendamiento.barbero!.nombreCompleto),
-              const Divider(),
-              _buildDetailRow('Fecha:', DateFormat('dd/MM/yyyy').format(DateTime.parse(agendamiento.fechaCita))),
-              _buildDetailRow('Hora:', '${agendamiento.horaInicio} - ${agendamiento.horaFin}'),
-              _buildDetailRow('Estado:', agendamiento.estadoCita),
-              if (agendamiento.monto != null)
-                _buildDetailRow('Monto:', '\$${agendamiento.monto!.toStringAsFixed(2)}', isBold: true),
-              if (agendamiento.observaciones != null && agendamiento.observaciones!.isNotEmpty)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 8),
-                    const Text('Observaciones:', style: TextStyle(fontWeight: FontWeight.w500)),
-                    Text(agendamiento.observaciones!),
-                  ],
-                ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cerrar'),
-          ),
-        ],
-      ),
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
     );
+
+    try {
+      // Fetch full appointment details
+      final full = await _agendamientoService.obtenerAgendamientoPorId(ag.id!);
+      
+      String barberoNombre = full.barbero?.nombreCompleto ?? 'N/A';
+
+      // Fallback: If barber name is missing, try to fetch it from auxiliary service
+      if (full.barbero == null) {
+        try {
+          final barberos = await _auxiliarService.obtenerBarberos();
+          final barbero = barberos.firstWhere(
+            (b) => b.id == full.barberoId,
+            orElse: () => Barbero(
+              id: 0,
+              documento: '',
+              nombre: 'Barbero',
+              apellido: 'Desconocido',
+              telefono: '',
+              email: '',
+              direccion: '',
+              estado: true,
+            ),
+          );
+          barberoNombre = barbero.nombreCompleto;
+        } catch (_) {
+          // Ignore error, keep "N/A"
+        }
+      }
+
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading dialog
+
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Detalles de tu Cita'),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildDetailRow('Tipo:', full.servicio != null ? 'Servicio' : 'Paquete'),
+                _buildDetailRow('Nombre:', full.servicio?.nombre ?? full.paquete?.nombre ?? 'N/A'),
+                const Divider(),
+                _buildDetailRow('Barbero:', barberoNombre), // Display retrieved barber name
+                const Divider(),
+                _buildDetailRow('Fecha:', DateFormat('dd/MM/yyyy').format(DateTime.parse(full.fechaCita))),
+                _buildDetailRow('Hora:', '${full.horaInicio} - ${full.horaFin}'),
+                _buildDetailRow('Estado:', full.estadoCita),
+                if (full.monto != null)
+                  _buildDetailRow('Monto:', '\$${full.monto!.toStringAsFixed(2)}', isBold: true),
+                if (full.observaciones != null && full.observaciones!.isNotEmpty)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 8),
+                      const Text('Observaciones:', style: TextStyle(fontWeight: FontWeight.w500)),
+                      Text(full.observaciones!),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cerrar'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading dialog
+      AppToast.showError(context, 'Error al cargar detalles: $e');
+    }
   }
 
   Widget _buildDetailRow(String label, String value, {bool isBold = false}) {
@@ -255,7 +283,7 @@ class _ClientAgendamientosScreenState extends State<ClientAgendamientosScreen> {
                         vertical: 12,
                       ),
                     ),
-                    items: ['Todos', 'Pendiente', 'Confirmado', 'Completado', 'Cancelado']
+                    items: EstadoCita.todosConFiltro
                         .map((estado) {
                       return DropdownMenuItem(
                         value: estado,
@@ -330,17 +358,17 @@ class _ClientAgendamientosScreenState extends State<ClientAgendamientosScreen> {
                                               vertical: 4,
                                             ),
                                             decoration: BoxDecoration(
-                                              color: _getEstadoColor(agendamiento.estadoCita)
-                                                  .withValues(alpha: 0.2),
+                                              color: EstadoCita.getColor(agendamiento.estadoCita)
+                                                  .withOpacity(0.2),
                                               borderRadius: BorderRadius.circular(12),
                                               border: Border.all(
-                                                color: _getEstadoColor(agendamiento.estadoCita),
+                                                color: EstadoCita.getColor(agendamiento.estadoCita),
                                               ),
                                             ),
                                             child: Text(
                                               agendamiento.estadoCita,
                                               style: TextStyle(
-                                                color: _getEstadoColor(agendamiento.estadoCita),
+                                                color: EstadoCita.getColor(agendamiento.estadoCita),
                                                 fontSize: 12,
                                                 fontWeight: FontWeight.bold,
                                               ),

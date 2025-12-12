@@ -10,6 +10,7 @@ import '../services/agendamiento_service.dart';
 import '../services/auxiliar_service.dart';
 import '../services/user_context_service.dart';
 import '../models/app_role.dart';
+import '../utils/estado_cita.dart';
 import '../widgets/session_guard.dart';
 
 class ClientAgendamientoFormScreen extends StatefulWidget {
@@ -137,7 +138,7 @@ class _ClientAgendamientoFormScreenState extends State<ClientAgendamientoFormScr
       _fechaSeleccionada = fecha;
       _horaInicio = horaInicio;
       _horaFin = horaFin;
-      _estadoCita = agendamiento.estadoCita;
+      _estadoCita = agendamiento.estadoCita == 'Confirmado' ? 'Confirmada' : agendamiento.estadoCita;
       _monto = agendamiento.monto;
       _observaciones = agendamiento.observaciones;
     });
@@ -192,10 +193,13 @@ class _ClientAgendamientoFormScreenState extends State<ClientAgendamientoFormScr
   }
 
   Future<void> _selectDate() async {
+    final now = DateTime.now();
+    final firstDate = _fechaSeleccionada.isBefore(now) ? _fechaSeleccionada : now;
+
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _fechaSeleccionada,
-      firstDate: DateTime.now(),
+      firstDate: firstDate,
       lastDate: DateTime.now().add(const Duration(days: 365)),
       locale: const Locale('es', 'ES'),
     );
@@ -286,11 +290,12 @@ class _ClientAgendamientoFormScreenState extends State<ClientAgendamientoFormScr
         const SizedBox(height: 8),
         InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(4),
           child: InputDecorator(
             decoration: const InputDecoration(
               border: OutlineInputBorder(),
               isDense: true,
+              contentPadding: EdgeInsets.symmetric(vertical: 12, horizontal: 12),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -301,8 +306,7 @@ class _ClientAgendamientoFormScreenState extends State<ClientAgendamientoFormScr
                     style: const TextStyle(fontWeight: FontWeight.w500),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Icon(icon, size: 18),
+                Icon(icon, size: 20),
               ],
             ),
           ),
@@ -601,8 +605,9 @@ class _ClientAgendamientoFormScreenState extends State<ClientAgendamientoFormScr
                           ),
                     const SizedBox(height: 16),
                     
-                    // Fecha y Hora
+                    // Fecha y Hora Inicio
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
                           child: _buildPickerField(
@@ -624,7 +629,10 @@ class _ClientAgendamientoFormScreenState extends State<ClientAgendamientoFormScr
                       ],
                     ),
                     const SizedBox(height: 16),
+                    
+                    // Hora Fin y Monto
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
                           child: _buildPickerField(
@@ -636,17 +644,25 @@ class _ClientAgendamientoFormScreenState extends State<ClientAgendamientoFormScr
                         ),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: TextFormField(
-                            controller: TextEditingController(
-                              text: _monto != null ? '\$${_monto!.toStringAsFixed(2)}' : '',
-                            ),
-                            decoration: const InputDecoration(
-                              labelText: 'Monto',
-                              border: OutlineInputBorder(),
-                              isDense: true,
-                              prefixIcon: Icon(Icons.attach_money),
-                            ),
-                            readOnly: true,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Monto'),
+                              const SizedBox(height: 8),
+                              TextFormField(
+                                controller: TextEditingController(
+                                  text: _monto != null ? '\$${_monto!.toStringAsFixed(2)}' : '',
+                                ),
+                                decoration: const InputDecoration(
+                                  border: OutlineInputBorder(),
+                                  isDense: true,
+                                  prefixIcon: Icon(Icons.attach_money, size: 20),
+                                  contentPadding: EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                                ),
+                                readOnly: true,
+                                style: const TextStyle(fontWeight: FontWeight.w500),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -661,7 +677,7 @@ class _ClientAgendamientoFormScreenState extends State<ClientAgendamientoFormScr
                         border: OutlineInputBorder(),
                         isDense: true,
                       ),
-                      items: ['Pendiente', 'Confirmada', 'En curso', 'Completada', 'Cancelada']
+                      items: EstadoCita.todos
                           .map((estado) => DropdownMenuItem<String>(
                                 value: estado,
                                 child: Text(estado),

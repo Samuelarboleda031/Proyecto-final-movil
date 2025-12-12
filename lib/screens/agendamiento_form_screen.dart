@@ -8,6 +8,7 @@ import '../models/paquete.dart';
 import '../services/agendamiento_service.dart';
 import '../services/auxiliar_service.dart';
 import '../models/app_role.dart';
+import '../utils/estado_cita.dart';
 import '../widgets/session_guard.dart';
 
 class AgendamientoFormScreen extends StatefulWidget {
@@ -297,6 +298,7 @@ class _AgendamientoFormScreenState extends State<AgendamientoFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+
     return SessionGuard(
       requiredRole: AppRole.admin,
       child: Scaffold(
@@ -490,13 +492,12 @@ class _AgendamientoFormScreenState extends State<AgendamientoFormScreen> {
                         labelText: 'Estado de Cita',
                         border: OutlineInputBorder(),
                       ),
-                      items: ['Pendiente', 'Confirmado', 'Completado', 'Cancelado']
-                          .map((estado) {
-                        return DropdownMenuItem(
-                          value: estado,
-                          child: Text(estado),
-                        );
-                      }).toList(),
+                      items: EstadoCita.todos
+                          .map((estado) => DropdownMenuItem<String>(
+                                value: estado,
+                                child: Text(estado),
+                              ))
+                          .toList(),
                       onChanged: (estado) {
                         setState(() {
                           _estadoCita = estado!;

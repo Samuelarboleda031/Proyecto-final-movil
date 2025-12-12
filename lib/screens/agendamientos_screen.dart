@@ -5,6 +5,7 @@ import '../services/agendamiento_service.dart';
 import '../services/auxiliar_service.dart'; // Import AuxiliarService
 import '../models/cliente.dart'; // Import Cliente
 import '../models/barbero.dart'; // Import Barbero
+import '../utils/estado_cita.dart';
 import 'agendamiento_form_screen.dart';
 
 import '../models/app_role.dart';
@@ -84,21 +85,6 @@ class _AgendamientosScreenState extends State<AgendamientosScreen> {
     }
 
     return filtrados;
-  }
-
-  Color _getEstadoColor(String estado) {
-    switch (estado.toLowerCase()) {
-      case 'pendiente':
-        return Colors.orange;
-      case 'confirmado':
-        return Colors.blue;
-      case 'completado':
-        return Colors.green;
-      case 'cancelado':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
   }
 
   Future<void> _verDetallesAgendamiento(Agendamiento agendamientoResumen) async {
@@ -296,7 +282,7 @@ class _AgendamientosScreenState extends State<AgendamientosScreen> {
                         vertical: 12,
                       ),
                     ),
-                    items: ['Todos', 'Pendiente', 'Confirmado', 'Completado', 'Cancelado']
+                    items: EstadoCita.todosConFiltro
                         .map((estado) {
                       return DropdownMenuItem(
                         value: estado,
@@ -372,17 +358,17 @@ class _AgendamientosScreenState extends State<AgendamientosScreen> {
                                           vertical: 4,
                                         ),
                                         decoration: BoxDecoration(
-                                          color: _getEstadoColor(agendamiento.estadoCita)
-                                              .withValues(alpha: 0.2),
+                                          color: EstadoCita.getColor(agendamiento.estadoCita)
+                                              .withOpacity(0.2),
                                           borderRadius: BorderRadius.circular(12),
                                           border: Border.all(
-                                            color: _getEstadoColor(agendamiento.estadoCita),
+                                            color: EstadoCita.getColor(agendamiento.estadoCita),
                                           ),
                                         ),
                                         child: Text(
                                           agendamiento.estadoCita,
                                           style: TextStyle(
-                                            color: _getEstadoColor(agendamiento.estadoCita),
+                                            color: EstadoCita.getColor(agendamiento.estadoCita),
                                             fontSize: 12,
                                             fontWeight: FontWeight.bold,
                                           ),

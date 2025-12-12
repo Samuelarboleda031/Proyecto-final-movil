@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/venta.dart';
 import '../services/venta_service.dart';
+import '../services/auxiliar_service.dart';
+import '../services/auth_service.dart';
+import '../models/cliente.dart';
 import '../models/app_role.dart';
 import '../widgets/session_guard.dart';
 import '../widgets/side_menu.dart';
@@ -15,7 +18,11 @@ class MisComprasScreen extends StatefulWidget {
 
 class _MisComprasScreenState extends State<MisComprasScreen> {
   final VentaService _ventaService = VentaService();
+  final AuxiliarService _auxiliarService = AuxiliarService();
+  final AuthService _authService = AuthService();
+  
   List<Venta> _ventas = [];
+  Map<int, String> _nombresBarberos = {};
   bool _isLoading = true;
   String _searchQuery = '';
 
@@ -31,9 +38,52 @@ class _MisComprasScreenState extends State<MisComprasScreen> {
     });
 
     try {
-      final ventas = await _ventaService.obtenerVentas();
+      final user = _authService.currentUser;
+      if (user == null || user.email == null) {
+        throw Exception('No se pudo identificar al usuario actual.');
+      }
+
+      // 1. Identificar al cliente actual
+      final clientes = await _auxiliarService.obtenerClientes();
+      final clienteActual = clientes.firstWhere(
+        (c) => (c.email ?? '').toLowerCase() == user.email!.toLowerCase(),
+        orElse: () => Cliente(
+          id: 0,
+          documento: '',
+          nombre: 'Cliente',
+          apellido: 'Desconocido',
+          telefono: '',
+          email: user.email,
+          direccion: '',
+          estado: true,
+        ),
+      );
+
+      final todasLasVentas = await _ventaService.obtenerVentas();
+      
+      // 2. Filtrar ventas del cliente actual
+      final misCompras = todasLasVentas.where((v) {
+        final coincideId = clienteActual.id != null && 
+                          clienteActual.id != 0 && 
+                          v.clienteId == clienteActual.id;
+                          
+        final coincideEmail = v.cliente?.email != null &&
+            clienteActual.email != null &&
+            v.cliente!.email!.toLowerCase() == clienteActual.email!.toLowerCase();
+            
+        return coincideId || coincideEmail;
+      }).toList();
+      
+      // Cargar barberos para mapear nombres si faltan en la venta
+      try {
+        final barberos = await _auxiliarService.obtenerBarberos();
+        _nombresBarberos = {for (var b in barberos) b.id!: b.nombreCompleto};
+      } catch (e) {
+        print('Error cargando barberos auxiliares: $e');
+      }
+
       setState(() {
-        _ventas = ventas;
+        _ventas = misCompras;
         _isLoading = false;
       });
     } catch (e) {
@@ -128,12 +178,21 @@ class _MisComprasScreenState extends State<MisComprasScreen> {
                                 title: Row(
                                   children: [
                                     Expanded(
-                                      child: Text(
-                                        'Compra #${venta.numero}',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 18,
-                                        ),
+                                      child: Builder(
+                                        builder: (context) {
+                                          final nombreBarbero = venta.barbero?.nombreCompleto ?? 
+                                                              _nombresBarberos[venta.barberoId];
+                                          
+                                          return Text(
+                                            nombreBarbero != null
+                                                ? 'Venta hecha por $nombreBarbero'
+                                                : 'Venta #${venta.numero}',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 18,
+                                            ),
+                                          );
+                                        }
                                       ),
                                     ),
                                     Container(
